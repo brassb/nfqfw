@@ -461,6 +461,9 @@ static int processPacketCallback(struct nfq_q_handle *qh, struct nfgenmsg *nfmsg
     printf("IP Header: daddr          = %s\n", dAddrStr);
   }
 
+  char hashAsBytes[SHA256_DIGEST_LENGTH];
+  memset(hashAsBytes, '\0', SHA256_DIGEST_LENGTH);
+
   if (ip->protocol == IPPROTO_ICMP) {
     if (verbose >= 2) { printf("This is an ICMP packet.\n"); }
     void * icmpHdrPtr = ((void *)ip) + 4*ihlOffset;
@@ -469,9 +472,6 @@ static int processPacketCallback(struct nfq_q_handle *qh, struct nfgenmsg *nfmsg
 
     if ((icmpType == 8) || (icmpType == 0)) { // For now, we support only echo-request or echo-response ICMP types
       if ((outdev == 0) && (indev > 0)) {
-        char hashAsBytes[SHA256_DIGEST_LENGTH];
-        memset(hashAsBytes, '\0', SHA256_DIGEST_LENGTH);
-
         char *toHash = buildToHash(ipPacketTotalLength - hmacLengthInBytes, ip, ihlOffset, 1, 0, 0);
         if (verbose >= 2) { hex_dump_bytes_to_hash(toHash, ipPacketTotalLength - hmacLengthInBytes); }
         calc_sha256_hash_bytes(ipPacketTotalLength - hmacLengthInBytes, toHash, hashAsBytes);
@@ -496,9 +496,6 @@ static int processPacketCallback(struct nfq_q_handle *qh, struct nfgenmsg *nfmsg
         }
       }
       else if ((indev == 0) && (outdev > 0)) {
-        char hashAsBytes[SHA256_DIGEST_LENGTH];
-        memset(hashAsBytes, '\0', SHA256_DIGEST_LENGTH);
-
         pktb_free(pkBuff);
         pkBuff = (struct pkt_buff *)((unsigned long)pktb_alloc(AF_INET, rawData, len + hmacLengthInBytes, 0x1000));
         ip = (struct iphdr *)((unsigned long)nfq_ip_get_hdr(pkBuff));
@@ -635,8 +632,6 @@ static int processPacketCallback(struct nfq_q_handle *qh, struct nfgenmsg *nfmsg
           char repBuff[2] = "0";
           memset(repBuff, '\0', 2);
 
-          char hashAsBytes[SHA256_DIGEST_LENGTH];
-          memset(hashAsBytes, '\0', SHA256_DIGEST_LENGTH);
           char *toHash = buildToHash(ipPacketTotalLength - hmacLengthInBytes, ip, ihlOffset, 0, 1, 0);
           if (verbose >= 2) { hex_dump_bytes_to_hash((char *)toHash, ipPacketTotalLength - hmacLengthInBytes); }
           calc_sha256_hash_bytes(ipPacketTotalLength - hmacLengthInBytes, (char *)toHash, hashAsBytes);
@@ -687,8 +682,6 @@ static int processPacketCallback(struct nfq_q_handle *qh, struct nfgenmsg *nfmsg
             ipPacketTotalLength = 1500 - hmacLengthInBytes;
           }
 
-          char hashAsBytes[SHA256_DIGEST_LENGTH];
-          memset(hashAsBytes, '\0', SHA256_DIGEST_LENGTH);
           char *toHash = buildToHash(ipPacketTotalLength, ip, ihlOffset, 0, 1, 0);
           unsigned short ipPacketTotalLength2 = ipPacketTotalLength + hmacLengthInBytes;
           unsigned short totLen2 = ((ipPacketTotalLength2 & 0xFF00) >> 8) | ((ipPacketTotalLength2 & 0x00FF) << 8);
@@ -731,8 +724,6 @@ static int processPacketCallback(struct nfq_q_handle *qh, struct nfgenmsg *nfmsg
           char repBuff[SHA256_DIGEST_LENGTH + 1];
           memset(repBuff, '\0', SHA256_DIGEST_LENGTH + 1);
 
-          char hashAsBytes[SHA256_DIGEST_LENGTH];
-          memset(hashAsBytes, '\0', SHA256_DIGEST_LENGTH);
           char *toHash = buildToHash(ipPacketTotalLength, ip, ihlOffset, 0, 1, 0);
           unsigned short ipPacketTotalLength2 = ipPacketTotalLength + hmacLengthInBytes;
           unsigned short totLen2 = ((ipPacketTotalLength2 & 0xFF00) >> 8) | ((ipPacketTotalLength2 & 0x00FF) << 8);
@@ -797,8 +788,6 @@ static int processPacketCallback(struct nfq_q_handle *qh, struct nfgenmsg *nfmsg
         if (verbose >= 2) { printf("udp myChecksum           = %d\n", myChecksum); }
         udp->check = myChecksum;
 
-        char hashAsBytes[SHA256_DIGEST_LENGTH];
-        memset(hashAsBytes, '\0', SHA256_DIGEST_LENGTH);
         char *toHash = buildToHash(ipPacketTotalLength - hmacLengthInBytes, ip, ihlOffset, 0, 0, 1);
         toHash[24] = (udpLen2 & 0xFF00) >> 8;
         toHash[25] =  udpLen2 & 0x00FF;
@@ -841,8 +830,6 @@ static int processPacketCallback(struct nfq_q_handle *qh, struct nfgenmsg *nfmsg
         udp = (struct udphdr *)((unsigned long)nfq_udp_get_hdr(pkBuff));
         unsigned short udpLen2 = udpLen + hmacLengthInBytes;
 
-        char hashAsBytes[SHA256_DIGEST_LENGTH];
-        memset(hashAsBytes, '\0', SHA256_DIGEST_LENGTH);
         char *toHash = buildToHash(ipPacketTotalLength, ip, ihlOffset, 0, 0, 1);
         unsigned short ipPacketTotalLength2 = ipPacketTotalLength + hmacLengthInBytes;
         unsigned short totLen2 = ((ipPacketTotalLength2 & 0xFF00) >> 8) | ((ipPacketTotalLength2 & 0x00FF) << 8);
